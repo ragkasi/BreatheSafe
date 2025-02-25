@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: locker-app
+    ports:
+      - "8080:8080"
+    environment:
+      # Spring Datasource config (point to the "db" service)
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/locker_db
+      SPRING_DATASOURCE_USERNAME: locker_user
+      SPRING_DATASOURCE_PASSWORD: password
+
+      # Twilio credentials (replace with your actual account SID/auth token)
+      TWILIO_ACCOUNT_SID: AC1234567890abcdef
+      TWILIO_AUTH_TOKEN: 1234567890abcdef1234567890abcdef
+      TWILIO_PHONE_NUMBER: +123456789
+
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8
+    container_name: locker-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: locker_db
+      MYSQL_USER: locker_user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+
+volumes:
+  dbdata:
