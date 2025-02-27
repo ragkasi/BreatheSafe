@@ -310,7 +310,7 @@ To run the BreatheSafe Locker System after you’ve completed the setup and cont
      ```
    - Ensure Twilio is configured to send SMS to your webhook endpoint (e.g., `http://<your-domain>:8080/api/sms-webhook`).
 
-## Next Steps and Further Improvements
+## Next Steps and Improvements
 
 After getting the application running, consider the following improvements and next steps:
 
