@@ -1,5 +1,8 @@
 package com.example.breathesafe.controllers;
 
+
+// import org.slf4j.Logger;
+// import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,6 +34,10 @@ public class SmsWebhookController {
         if (parts.length < 3) {
             return "<Response><Message>Invalid command format. Expected: UNLOCK <lockerId> <PIN></Message></Response>";
         }
+
+        // Print incoming text messages to the console
+        System.out.print("Received SMS from: " + from);
+        System.out.print("Message body: " + body);
 
         String command = parts[0].toUpperCase();
         String lockerIdStr = parts[1];
