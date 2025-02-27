@@ -31,6 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
-src/main/resources/account.sid
-src/main/resources/auth.token
-src/main/resources/phone.number
+
+.env
+/src/main/resources/.env

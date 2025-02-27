@@ -1,4 +1,4 @@
-version: '3.8'
+#version: '3.8'
 
 services:
   app:
@@ -10,14 +10,14 @@ services:
       - "8080:8080"
     environment:
       # Spring Datasource config (point to the "db" service)
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/locker_db
-      SPRING_DATASOURCE_USERNAME: locker_user
-      SPRING_DATASOURCE_PASSWORD: password
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
 
       # Twilio credentials (replace with your actual account SID/auth token)
-      TWILIO_ACCOUNT_SID: AC1234567890abcdef
-      TWILIO_AUTH_TOKEN: 1234567890abcdef1234567890abcdef
-      TWILIO_PHONE_NUMBER: +123456789
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
 
     depends_on:
       - db
@@ -26,12 +26,12 @@ services:
     image: mysql:8
     container_name: locker-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: locker_db
-      MYSQL_USER: locker_user
-      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - dbdata:/var/lib/mysql
 

@@ -1,30 +1,50 @@
-package com.example.lockersystem.security;
+package com.example.breathesafe.security;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.*;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.core.userdetails.UserDetailsService;
 
 @Configuration
 @EnableWebSecurity
-public class SecurityConfig extends WebSecurityConfigurerAdapter {
+public class SecurityConfig {
 
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        // For example: permit all for demonstration, but lock it down in production
-        http.csrf().disable()
-            .authorizeRequests()
-            .antMatchers("/api/sms-webhook").permitAll()
-            .anyRequest().authenticated()
-            .and()
-            .addFilter(new JwtAuthenticationFilter(authenticationManager()))
-            .addFilter(new JwtAuthorizationFilter(authenticationManager()));
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authManager) throws Exception {
+        http
+            // Disable CSRF for demonstration (adjust as needed for production)
+            .csrf(csrf -> csrf.disable())
+            // Use the lambda DSL for request authorization
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/sms-webhook").permitAll() // permit SMS webhook endpoint
+                .anyRequest().authenticated()
+            )
+            // Add your custom JWT filters, which now receive the AuthenticationManager
+            .addFilter(new JwtAuthenticationFilter(authManager))
+            .addFilter(new JwtAuthorizationFilter(authManager));
+        
+        return http.build();
     }
-
-    @Override
-    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        // In-memory auth for testing (not recommended in real production)
-        auth.inMemoryAuthentication()
-            .withUser("test").password("{noop}test123").roles("USER");
+    
+    @Bean
+    public UserDetailsService userDetailsService() {
+        // In-memory authentication for demonstration purposes
+        return new InMemoryUserDetailsManager(
+            User.withUsername("test")
+                .password("{noop}test123") // {noop} indicates no encoding, for demo only
+                .roles("USER")
+                .build()
+        );
+    }
+    
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+        return configuration.getAuthenticationManager();
     }
 }

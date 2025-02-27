@@ -1,6 +1,6 @@
-package com.example.lockersystem.repositories;
+package com.example.breathesafe.repositories;
 
-import com.example.lockersystem.entities.User;
+import com.example.breathesafe.entities.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

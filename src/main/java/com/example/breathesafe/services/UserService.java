@@ -1,7 +1,7 @@
-package com.example.lockersystem.services;
+package com.example.breathesafe.services;
 
-import com.example.lockersystem.entities.User;
-import com.example.lockersystem.repositories.UserRepository;
+import com.example.breathesafe.entities.User;
+import com.example.breathesafe.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;

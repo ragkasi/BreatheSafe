@@ -1,4 +1,4 @@
-package com.example.lockersystem.config;
+package com.example.breathesafe.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

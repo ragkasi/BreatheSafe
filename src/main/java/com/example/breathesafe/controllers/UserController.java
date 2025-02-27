@@ -1,7 +1,7 @@
-package com.example.lockersystem.controllers;
+package com.example.breathesafe.controllers;
 
-import com.example.lockersystem.entities.User;
-import com.example.lockersystem.services.UserService;
+import com.example.breathesafe.entities.User;
+import com.example.breathesafe.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 

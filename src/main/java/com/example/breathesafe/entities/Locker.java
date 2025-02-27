@@ -1,6 +1,6 @@
-package com.example.lockersystem.entities;
+package com.example.breathesafe.entities;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "lockers")
