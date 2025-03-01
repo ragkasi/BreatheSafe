@@ -38,6 +38,7 @@ public class SmsWebhookController {
      *  - "UNLOCK <PIN>": Unlocks the locker if the provided PIN matches, then clears the PIN.
      *  - "RELEASE <lockerNumber>": Unassigns the locker and deletes the user from the DB.
      *  - "LOCKER": Returns the assigned locker number.
+     *  - "STOP" or "UNSUBSCRIBE": Unassigns any reserved locker and deletes the user from the DB.
      *  - Otherwise, unrecognized commands are reported as errors.
      */
     @PostMapping(value = "/sms-webhook", produces = MediaType.APPLICATION_XML_VALUE)
@@ -74,7 +75,7 @@ public class SmsWebhookController {
                 return "<Response><Message>" + msg + "</Message></Response>";
             }
         }
-        
+
         // If a record exists but the name is empty, treat the entire message as the user's name.
         if (userOpt.isPresent() && (userOpt.get().getName() == null || userOpt.get().getName().trim().isEmpty())) {
             String fullName = trimmed;
@@ -92,7 +93,7 @@ public class SmsWebhookController {
                 return "<Response><Message>" + msg + "</Message></Response>";
             }
         }
-        
+
         // If the user record still doesn't exist or is incomplete, prompt registration.
         if (!userOpt.isPresent() || userOpt.get().getName() == null || userOpt.get().getName().trim().isEmpty()) {
             String msg = "You are not registered. Please send 'START' to begin registration.";
@@ -162,7 +163,7 @@ public class SmsWebhookController {
                     lockerService.unassignLockerFromUser(user);
                     userService.deleteUser(user);
                     String msg = "Your locker (" + lockerOpt3.get().getId() + ") has been unlinked and your registration released.";
-                    smsService.sendSms(from, msg);
+                    // Note: Do not attempt to send SMS here because the user may be unsubscribed.
                     return "<Response><Message>" + msg + "</Message></Response>";
                 } else {
                     String msg = "Error: Provided locker number does not match your assigned locker.";
@@ -180,6 +181,13 @@ public class SmsWebhookController {
                     smsService.sendSms(from, msg);
                     return "<Response><Message>" + msg + "</Message></Response>";
                 }
+            case "STOP":
+            case "UNSUBSCRIBE":
+                // For STOP/UNSUBSCRIBE, unassign any locker and delete the user.
+                lockerService.unassignLockerFromUser(user);
+                userService.deleteUser(user);
+                // Return an empty response since Twilio will block outbound messages to unsubscribed numbers.
+                return "<Response></Response>";
             default:
                 String msg = "Error: Unrecognized command.";
                 smsService.sendSms(from, msg);
