@@ -16,13 +16,15 @@ A Spring Boot-based locker system that uses MySQL and Twilio for SMS-based locke
     - [SMS Service Integration](#sms-service-integration)
   - [3. Application Properties](#3-application-properties)
   - [4. Containerization with Docker Compose](#4-containerization-with-docker-compose)
+    - [Dockerfile](#dockerfile)
+    - [Ngrok Tunnel Setup](#ngrok-tunnel-setup)
 - [Running the Application](#running-the-application)
 - [Next Steps and Improvements](#next-steps-and-improvements)
 - [Troubleshooting](#troubleshooting)
 
 ## Introduction
 
-The **BreatheSafe Locker System** manages lockers by accepting user information and controlling physical locks. Unlocking is done via SMS messages (handled by Twilio). This document details the end-to-end process from initial setup to running the application in Docker containers.
+The **BreatheSafe Locker System** manages lockers by accepting user information and controlling physical locks. Unlocking is done via SMS messages (handled by Twilio). This document details the end-to-end process from initial setup to running the application in Docker containers. This project is registered to respond to the number +12346023617.
 
 ## Architecture Overview
 
@@ -38,6 +40,7 @@ The **BreatheSafe Locker System** manages lockers by accepting user information 
 - Maven  
 - Docker Desktop (using Linux containers is recommended)  
 - A Twilio account with valid credentials  
+- An ngrok account with an authtoken and a reusable URL (optional but recommended)  
 - Git (optional)
 
 ## Setup and Implementation
@@ -56,42 +59,6 @@ The **BreatheSafe Locker System** manages lockers by accepting user information 
   - `mysql-connector-j` (MySQL driver)
   - `jakarta.annotation-api` (for annotations like `@PostConstruct`)
 
-  *Example snippet:*
-  ```xml
-  <dependencies>
-    <!-- Spring Boot Starters -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-web</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-data-jpa</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-security</artifactId>
-    </dependency>
-    <!-- Twilio SDK -->
-    <dependency>
-      <groupId>com.twilio.sdk</groupId>
-      <artifactId>twilio</artifactId>
-      <version>8.32.0</version>
-    </dependency>
-    <!-- MySQL Connector -->
-    <dependency>
-      <groupId>com.mysql</groupId>
-      <artifactId>mysql-connector-j</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-    <!-- Jakarta Annotation API -->
-    <dependency>
-      <groupId>jakarta.annotation</groupId>
-      <artifactId>jakarta.annotation-api</artifactId>
-      <version>2.1.1</version>
-    </dependency>
-    <!-- ... other dependencies ... -->
-  </dependencies>
 
 ### 2. Code Structure Overview
 
@@ -103,20 +70,6 @@ This section outlines the main components of our codebase, including how we orga
 - **Purpose:** Define the data model using JPA entities.
 - **Details:**  
   - Use Jakarta Persistence annotations (e.g., `@Entity`, `@Table`, `@Id`, `@GeneratedValue`).
-  - Example snippet:
-    ```java
-    @Entity
-    @Table(name = "users")
-    public class User {
-        @Id
-        @GeneratedValue(strategy = GenerationType.IDENTITY)
-        private Long id;
-        private String name;
-        private String phoneNumber;
-        // Getters and setters...
-    }
-    ```
-  - A similar structure is applied for the `Locker` entity.
 
 #### Controllers
 
@@ -124,18 +77,6 @@ This section outlines the main components of our codebase, including how we orga
 - **Purpose:** Handle incoming HTTP requests and expose REST endpoints.
 - **Details:**  
   - Controllers are annotated with Spring Web annotations such as `@RestController`, `@RequestMapping`, `@PostMapping`, and `@RequestParam`.
-  - Example snippet (for SMS webhook processing):
-    ```java
-    @RestController
-    @RequestMapping("/api")
-    public class SmsWebhookController {
-        @PostMapping("/sms-webhook")
-        public void receiveSms(@RequestParam("From") String from,
-                               @RequestParam("Body") String body) {
-            // Process the SMS message (e.g., parse commands and validate the sender)
-        }
-    }
-    ```
 
 #### Security Configuration
 
@@ -144,18 +85,6 @@ This section outlines the main components of our codebase, including how we orga
 - **Details:**  
   - A `SecurityConfig` class defines a `SecurityFilterChain` bean for HTTP security.
   - Custom JWT filters (such as `JwtAuthenticationFilter` and `JwtAuthorizationFilter`) are added to handle token-based authentication.
-  - Example snippet:
-    ```java
-    http
-      .csrf(csrf -> csrf.disable())
-      .authorizeHttpRequests(auth -> auth
-          .requestMatchers("/api/sms-webhook").permitAll()
-          .anyRequest().authenticated()
-      )
-      .addFilter(new JwtAuthenticationFilter(authManager))
-      .addFilter(new JwtAuthorizationFilter(authManager));
-    ```
-  - Note: Minimal placeholder implementations for the JWT filters are provided, with the expectation that you will later add JWT parsing, validation, and token generation logic.
 
 #### SMS Service Integration
 
@@ -163,36 +92,7 @@ This section outlines the main components of our codebase, including how we orga
 - **Purpose:** Integrate with Twilio to send SMS messages.
 - **Details:**  
   - The `SmsService` uses `@Value` annotations to inject Twilio credentials from the `application.properties` file.
-  - The Twilio client is initialized in a `@PostConstruct` method.
-  - Example snippet:
-    ```java
-    @Service
-    public class SmsService {
-    
-        @Value("${twilio.accountSid}")
-        private String accountSid;
-    
-        @Value("${twilio.authToken}")
-        private String authToken;
-    
-        @Value("${twilio.phoneNumber}")
-        private String fromNumber;
-    
-        @PostConstruct
-        public void init() {
-            Twilio.init(accountSid, authToken);
-        }
-    
-        public void sendSms(String to, String body) {
-            Message message = Message.creator(
-                new PhoneNumber(to),
-                new PhoneNumber(fromNumber),
-                body
-            ).create();
-        }
-    }
-    ```
-  - This service is responsible for sending commands (such as locker unlock requests) via SMS.
+  - The Twilio client is initialized in a `@PostConstruct` method.  
 
 This overview provides a high-level guide to how the application’s code is structured and how its core functionalities are implemented.
 
@@ -239,15 +139,6 @@ Create a .env file to store the above information.
   
 - **Docker and Deployment:**
   When running the application via Docker Compose, the environment variables are passed in the docker-compose.yml file. For example:
-  ```yaml
-  environment:
-  SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/locker_db
-  SPRING_DATASOURCE_USERNAME: locker_user
-  SPRING_DATASOURCE_PASSWORD: password
-  TWILIO_ACCOUNT_SID: ACxxxx...
-  TWILIO_AUTH_TOKEN: xxxx...
-  TWILIO_PHONE_NUMBER: +123456789
-  ```
   This setup ensures that the application uses the correct configuration based on its deployment environment.
 
 ### 4. Containerization with Docker Compose
@@ -260,25 +151,23 @@ The `Dockerfile` builds the application in two stages:
 1. **Build Stage:** Uses a Maven image with Java 17 to compile and package the application.
 2. **Runtime Stage:** Uses a slim JDK image to run the generated JAR file.
 
-*Example Dockerfile snippet:*
-```dockerfile
-# Build stage: use a Maven image with Java 17 to build the app
-FROM maven:3.9.2-eclipse-temurin-17 AS build
-WORKDIR /app
-# Copy Maven configuration and source code
-COPY pom.xml /app/
-COPY src /app/src
-# Build the application without running tests
-RUN mvn clean package -DskipTests
+#### Ngrok Tunnel Setup
 
-# Runtime stage: use a slim JDK image for running the app
-FROM eclipse-temurin:17-jdk
-WORKDIR /app
-# Copy the packaged JAR from the build stage
-COPY --from=build /app/target/*.jar app.jar
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
-```
+The ngrok service in the Docker Compose file is used to expose your application to the public internet. Key points for setting up the tunnel:
+
+- **NGROK_AUTHTOKEN**
+  Ensure you have an ngrok authtoken registered in your ngrok account. Set this value in your environment or .env file as NGROK_AUTH_TOKEN.
+
+- **Reusable URL**
+  The command includes the parameter --url=hawk-capable-greatly.ngrok-free.app, which is your reusable ngrok URL. This ensures that your public URL remains constant across tunnel restarts.
+
+- **Upstream Service**
+  The command parameter "locker-app:8080" tells ngrok to route traffic to your Spring Boot container by its service name (app is aliased as locker-app in our Compose file) on port 8080.
+
+- **Dashboard**
+  Mapping port 4040 lets you access the ngrok dashboard locally via http://localhost:4040.
+
+Make sure your .env file includes both NGROK_AUTH_TOKEN and other required environment variables.
 
 ## Running the Application
 
@@ -295,24 +184,17 @@ To run the BreatheSafe Locker System after you’ve completed the setup and cont
      ```bash
      docker compose up
      ```
-   - This will start both the Spring Boot application (exposed on port 8080) and the MySQL database (mapped to host port 3307).
+   - This will start the Spring Boot application on port 8080, the MySQL database on host port 3307, and the ngrok tunnel.
 
 3. **Verify Operation:**
-   - Open cmd and ran:
-   ```cmd
-   ngrok http http://localhost:8080
-   ```
-   - Open your browser and navigate to [http://localhost:8080](http://localhost:8080) to access the application.
-   - Use a MySQL client to connect to your database at `localhost:3307` if needed.
-   - Monitor the logs in a separate terminal with:
-     ```bash
-     docker compose logs -f
-     ```
-   - Ensure Twilio is configured to send SMS to your webhook endpoint (e.g., `http://<your-domain>:8080/api/sms-webhook`).
+   - Access the application via the public ngrok URL (e.g., https://hawk-capable-greatly.ngrok-free.app).
+   - Use a MySQL client to connect to your database at localhost:3307 if needed.
+   - Open http://localhost:4040 to view the ngrok dashboard.
+   - Configure Twilio to forward SMS to your public ngrok URL (e.g., https://hawk-capable-greatly.ngrok-free.app/api/sms-webhook).
 
 ## Next Steps and Improvements
 
-After getting the application running, consider the following improvements and next steps:
+This application is still in development. Next steps:
 
 - **Implement Full JWT Functionality:**
   - Complete the logic in `JwtAuthenticationFilter` and `JwtAuthorizationFilter` to generate, validate, and parse JWT tokens.
@@ -362,6 +244,10 @@ If you encounter issues during development or deployment, consider the following
   
 - **General Debugging:**
   - Use verbose logging (`--debug` or `--info` flags) with Maven and Docker for more detailed error messages.
+
+- **Ngrok Tunnel:**
+  - Verify that your ngrok configuration includes a valid authtoken and that the reusable URL is correctly specified. If the tunnel does not connect, check the logs using docker compose logs ngrok.
+
 
 By following these troubleshooting steps and next steps for improvements, you can iteratively refine your application toward a production-ready state.
 

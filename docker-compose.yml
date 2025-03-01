@@ -21,6 +21,19 @@ services:
 
     depends_on:
       - db
+  
+  ngrok:
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTH_TOKEN}
+    command:
+      - "http"
+      - "locker-app:8080"
+      - "--url=hawk-capable-greatly.ngrok-free.app"
+    ports:
+    # Optional: add if you need the dashboard
+      - "4040:4040"
 
   db:
     image: mysql:8

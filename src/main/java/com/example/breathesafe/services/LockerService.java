@@ -1,13 +1,14 @@
 package com.example.breathesafe.services;
 
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import com.example.breathesafe.entities.Locker;
 import com.example.breathesafe.entities.User;
 import com.example.breathesafe.repositories.LockerRepository;
 import com.example.breathesafe.repositories.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import java.util.Optional;
 
 @Service
 public class LockerService {
@@ -28,6 +29,19 @@ public class LockerService {
         locker.setLocked(true);
         return lockerRepository.save(locker);
     }
+    
+    // New method for auto-assigning a locker to a new user.
+    // If no locker is free, it throws an exception.
+    public Locker assignLockerToNewUser(User user) {
+        Optional<Locker> freeLockerOpt = lockerRepository.findFirstByAssignedUserIsNull();
+        if (freeLockerOpt.isEmpty()) {
+            throw new RuntimeException("No lockers available");
+        }
+        Locker locker = freeLockerOpt.get();
+        locker.setAssignedUser(user);
+        locker.setLocked(false);
+        return lockerRepository.save(locker);
+    }
 
     public Locker unlockLocker(Long lockerId, Long userId) {
         Locker locker = lockerRepository.findById(lockerId)
@@ -41,43 +55,6 @@ public class LockerService {
         return lockerRepository.save(locker);
     }
     
-    // New method for SMS-based unlocking
-    public boolean unlockLockerViaSms(String phoneNumber, Long lockerId, String pin) {
-        // Look up the user by their phone number (make sure UserRepository has this method)
-        Optional<User> userOpt = userRepository.findByPhoneNumber(phoneNumber);
-        if (userOpt.isEmpty()) {
-            return false;
-        }
-        User user = userOpt.get();
-        
-        // TODO: Validate the provided pin against the user's stored PIN or another mechanism.
-        // For now, we'll assume the pin is valid.
-        try {
-            unlockLocker(lockerId, user.getId());
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-    
-    // New method for SMS-based locking; assumes a similar locking operation is desired.
-    public boolean lockLockerViaSms(String phoneNumber, Long lockerId, String pin) {
-        Optional<User> userOpt = userRepository.findByPhoneNumber(phoneNumber);
-        if (userOpt.isEmpty()) {
-            return false;
-        }
-        User user = userOpt.get();
-        
-        // TODO: Validate the provided pin.
-        try {
-            lockLocker(lockerId, user.getId());
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-    
-    // Helper method to lock a locker
     public Locker lockLocker(Long lockerId, Long userId) {
         Locker locker = lockerRepository.findById(lockerId)
                 .orElseThrow(() -> new RuntimeException("Locker not found with ID: " + lockerId));
@@ -86,5 +63,21 @@ public class LockerService {
         }
         locker.setLocked(true);
         return lockerRepository.save(locker);
+    }
+    
+    // Returns the locker assigned to a user.
+    public Optional<Locker> getLockerForUser(Long userId) {
+        return lockerRepository.findByAssignedUserId(userId);
+    }
+    
+    // Unassigns the locker from a user.
+    public void unassignLockerFromUser(User user) {
+        Optional<Locker> lockerOpt = lockerRepository.findByAssignedUserId(user.getId());
+        if (lockerOpt.isPresent()) {
+            Locker locker = lockerOpt.get();
+            locker.setAssignedUser(null);
+            locker.setLocked(false);
+            lockerRepository.save(locker);
+        }
     }
 }
